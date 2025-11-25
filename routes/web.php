@@ -7,6 +7,7 @@ use App\Livewire\ModelInspector;
 use App\Livewire\ProjectCostCalculator;
 use App\Livewire\CostDatabase;
 use App\Livewire\ProjectDashboard;
+use App\Livewire\CostLibraryManager;
 
 /*
 |--------------------------------------------------------------------------
@@ -34,6 +35,7 @@ Route::get('/inspector', ModelInspector::class)->middleware(['auth', 'verified']
 Route::get('/estimasi', ProjectCostCalculator::class)->middleware(['auth', 'verified'])->name('cost-calculator');
 Route::get('/master-harga', CostDatabase::class)->middleware(['auth', 'verified'])->name('cost-database');
 Route::get('/dashboard/{id}', ProjectDashboard::class)->middleware(['auth', 'verified'])->name('project-dashboard');
+Route::get('/libraries', CostLibraryManager::class)->middleware(['auth', 'verified'])->name('cost-libraries');
 
 Route::get('/test-token', function () {
     $service = new AutodeskService();

@@ -2,9 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\AhspMaster;
 use App\Models\CostResult;
-use App\Models\MasterUnitPrice;
-use App\Models\ModelElement;
 use App\Models\Project;
 use Illuminate\Support\Facades\DB;
 
@@ -12,14 +11,23 @@ class CostEstimationService
 {
     public function calculateProject(Project $project)
     {
-        // 1. Ambil semua elemen yang punya Volume > 0
+        // 1. Cek apakah Project sudah punya Cost Library?
+        if (!$project->cost_library_id) {
+            return [
+                'status' => 'error', 
+                'message' => 'Pilih "Cost Library" (Buku Harga) terlebih dahulu sebelum menghitung!'
+            ];
+        }
+
+        // 2. Ambil Semua Elemen Model
         $elements = $project->elements()->where('volume', '>', 0)->get();
 
-        // 2. Ambil semua Master Harga milik User ini
-        // Kita jadikan Key-nya 'work_code' agar pencarian cepat (tanpa looping database berulang)
-        $prices = MasterUnitPrice::where('user_id', $project->user_id)
-                    ->get()
-                    ->keyBy('work_code');
+        // 3. Ambil Resep AHSP dari Library yang dipilih
+        // Kita ambil code, total_price (computed), division, sub_division
+        $ahspList = AhspMaster::with('coefficients.resource')
+                        ->where('cost_library_id', $project->cost_library_id)
+                        ->get()
+                        ->keyBy('code'); // Indexing biar pencarian cepat
 
         $resultsData = [];
         $matchedCount = 0;
@@ -27,36 +35,36 @@ class CostEstimationService
 
         DB::beginTransaction();
         try {
-            // Hapus hasil hitungan lama (jika ada) biar bersih
+            // Bersihkan hasil lama
             CostResult::where('project_id', $project->id)->delete();
 
             foreach ($elements as $el) {
-                // LOGIKA UTAMA: MATCHING
-                // Cek apakah assembly_code elemen ini ada di daftar harga?
-                $code = $el->assembly_code;
-                $priceData = isset($code) ? $prices->get($code) : null;
+                $code = $el->assembly_code; // Contoh: C2010
+                
+                // Cari Resep
+                $ahspItem = isset($code) ? $ahspList->get($code) : null;
 
-                if ($priceData) {
-                    // JIKA COCOK (MATCHED)
-                    $unitPrice = $priceData->price;
+                if ($ahspItem) {
+                    // HITUNG HARGA (Rumus: Total Resep)
+                    $unitPrice = $ahspItem->total_price; // Ini otomatis menghitung (Koef x Harga Resource)
+                    
                     $totalCost = $el->volume * $unitPrice;
                     $status = 'matched';
-                    $matchedWorkCode = $priceData->work_code;
+                    $matchedCode = $ahspItem->code;
+                    
                     $matchedCount++;
                     $totalProjectCost += $totalCost;
                 } else {
-                    // JIKA TIDAK COCOK (UNASSIGNED)
                     $unitPrice = 0;
                     $totalCost = 0;
                     $status = 'unassigned';
-                    $matchedWorkCode = null;
+                    $matchedCode = null;
                 }
 
-                // Siapkan data untuk insert batch
                 $resultsData[] = [
                     'project_id' => $project->id,
                     'model_element_id' => $el->id,
-                    'matched_work_code' => $matchedWorkCode,
+                    'matched_work_code' => $matchedCode,
                     'unit_price_applied' => $unitPrice,
                     'total_cost' => $totalCost,
                     'status' => $status,
@@ -65,26 +73,21 @@ class CostEstimationService
                 ];
             }
 
-            // Simpan ke database (Batch Insert per 500 data agar cepat)
+            // Batch Insert (Pecah per 500 agar database tidak tersedak)
             foreach (array_chunk($resultsData, 500) as $chunk) {
                 CostResult::insert($chunk);
             }
 
             DB::commit();
-
             return [
                 'status' => 'success',
-                'elements_processed' => count($elements),
-                'elements_matched' => $matchedCount,
-                'total_cost' => $totalProjectCost
+                'total_cost' => $totalProjectCost,
+                'matched' => $matchedCount
             ];
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return [
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ];
+            return ['status' => 'error', 'message' => $e->getMessage()];
         }
     }
 }
