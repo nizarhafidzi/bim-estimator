@@ -1,17 +1,33 @@
-<div class="min-h-screen bg-gray-100 p-8 font-serif">
+<div class="min-h-screen bg-gray-100 p-8">
     
     <style>
+        /* Gunakan Times New Roman untuk seluruh halaman */
+        body, .font-serif { 
+            font-family: 'Times New Roman', Times, serif !important; 
+            color: #000;
+        }
+
+        /* Style Tabel Cetak (Garis Hitam Tegas) */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid black; padding: 6px 8px; }
+        th { background-color: #f3f4f6 !important; font-weight: bold; text-align: center; text-transform: uppercase; }
+        
+        /* Print Settings */
         @media print {
+            @page { margin: 10mm 15mm; size: A4; }
             body * { visibility: hidden; }
             #report-container, #report-container * { visibility: visible; }
-            #report-container { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
+            #report-container { 
+                position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none; 
+            }
             .no-print { display: none !important; }
-            /* Hide Laravel Sidebar/Nav */
             nav, header, aside { display: none !important; }
+            .page-break { page-break-before: always; }
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
         }
     </style>
 
-    <div class="max-w-[210mm] mx-auto mb-6 flex justify-between items-center no-print">
+    <div class="max-w-[210mm] mx-auto mb-6 flex justify-between items-center no-print font-sans">
         <a href="{{ route('dashboard') }}" class="text-sm text-gray-500 hover:text-gray-800 flex items-center gap-1">
             &larr; Back to Dashboard
         </a>
@@ -21,123 +37,140 @@
         </button>
     </div>
 
-    <div id="report-container" class="max-w-[210mm] mx-auto bg-white shadow-2xl p-12 min-h-[297mm] relative">
+    <div id="report-container" class="max-w-[210mm] mx-auto bg-white shadow-2xl p-10 min-h-[297mm] relative">
         
-        <div class="border-b-4 border-double border-gray-800 pb-6 mb-8 flex justify-between items-center">
-            <div class="flex items-center gap-4">
-                <div class="w-16 h-16 bg-gray-900 text-white flex items-center justify-center rounded-lg">
-                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                </div>
-                <div>
-                    <h1 class="text-2xl font-extrabold text-gray-900 uppercase tracking-widest">PT. KONSTRUKSI JAYA</h1>
-                    <p class="text-sm text-gray-500">General Contractor & Engineering</p>
-                    <p class="text-xs text-gray-400">Jl. Jendral Sudirman No. 1, Jakarta | +62 21 555 0199</p>
-                </div>
+        <div class="flex items-center justify-between border-b-4 border-double border-black pb-2 mb-6">
+            <div class="w-28 h-20 flex items-center justify-start">
+                <img src="{{ asset('images/logo-perusahaan.png') }}" alt="Logo" class="h-full object-contain">
             </div>
-            <div class="text-right">
-                <h2 class="text-xl font-bold text-gray-800">ENGINEER'S ESTIMATE</h2>
-                <p class="text-sm text-gray-500 font-mono">Doc No: EST-{{ $project->id }}-{{ date('Y') }}</p>
+
+            <div class="flex-1 text-center px-2">
+                <h1 class="text-2xl font-bold text-[#FF0000] uppercase tracking-wide mb-1" style="color: red;">
+                    PT BUANA ENJINIRING KONSULTAN
+                </h1>
+                <p class="text-sm text-black leading-tight">
+                    Jl. Mayjen DI Panjaitan Kav 12, RT.3/RW.11 Cipinang Cempedak, Jatinegara<br>
+                    DKI Jakarta 13340, email : Admin@bek.co.id
+                </p>
+            </div>
+
+            <div class="w-28 h-16 flex items-center justify-end">
+                <img src="{{ asset('images/bim.png') }}" alt="Logo" class="h-full object-contain">
             </div>
         </div>
 
-        <div class="mb-8 bg-gray-50 p-4 rounded border border-gray-200">
-            <table class="w-full text-sm">
+        <div class="mb-6">
+            <div class="text-center mb-6">
+                <h2 class="text-xl font-bold text-black uppercase underline">BILL Of QUANTITY</h2>
+                <p class="text-sm font-bold">Proyek: {{ $project->name }}</p>
+            </div>
+
+            <table class="text-sm w-full border-none mb-4" style="border: none !important;">
                 <tr>
-                    <td class="font-bold text-gray-500 w-32 py-1">Project Name</td>
-                    <td class="font-bold text-gray-900">: {{ $project->name }}</td>
-                    <td class="font-bold text-gray-500 w-24 text-right">Date</td>
-                    <td class="text-right text-gray-900 w-32">: {{ $currentDate }}</td>
+                    <td style="border: none; width: 100px;"><strong>Nomor</strong></td>
+                    <td style="border: none; width: 10px;">:</td>
+                    <td style="border: none;">EST-{{ $project->id }}/{{ date('m/Y') }}</td>
+                    <td style="border: none; width: 80px;"><strong>Tanggal</strong></td>
+                    <td style="border: none; width: 10px;">:</td>
+                    <td style="border: none;">{{ $currentDate }}</td>
                 </tr>
                 <tr>
-                    <td class="font-bold text-gray-500 py-1">Cost Library</td>
-                    <td class="text-gray-900">: {{ $project->costLibrary->name ?? '-' }}</td>
-                    <td class="font-bold text-gray-500 text-right">Currency</td>
-                    <td class="text-right text-gray-900">: IDR (Rupiah)</td>
+                    <td style="border: none;"><strong>Library</strong></td>
+                    <td style="border: none;">:</td>
+                    <td style="border: none;">{{ $project->costLibrary->name ?? '-' }}</td>
+                    <td style="border: none;"><strong>Lokasi</strong></td>
+                    <td style="border: none;">:</td>
+                    <td style="border: none;">Jakarta</td>
                 </tr>
             </table>
         </div>
 
         <div class="mb-10">
-            <h3 class="text-lg font-bold text-gray-800 border-b-2 border-gray-800 mb-4 pb-1">I. REKAPITULASI BIAYA</h3>
-            <table class="w-full text-sm border-collapse border border-gray-300">
+            <h3 class="text-base font-bold text-black uppercase mb-2">I. REKAPITULASI BIAYA</h3>
+            <table>
                 <thead>
-                    <tr class="bg-gray-100">
-                        <th class="border border-gray-300 px-4 py-2 text-center w-12">NO</th>
-                        <th class="border border-gray-300 px-4 py-2 text-left">DIVISI PEKERJAAN</th>
-                        <th class="border border-gray-300 px-4 py-2 text-right w-48">TOTAL (RP)</th>
+                    <tr>
+                        <th style="width: 50px;">NO</th>
+                        <th>URAIAN PEKERJAAN (DIVISI)</th>
+                        <th style="width: 180px;">TOTAL HARGA (RP)</th>
                     </tr>
                 </thead>
                 <tbody>
                     @php $no = 1; @endphp
                     @foreach($recapBoq as $div => $total)
                         <tr>
-                            <td class="border border-gray-300 px-4 py-2 text-center">{{ $no++ }}</td>
-                            <td class="border border-gray-300 px-4 py-2 font-bold">{{ $div }}</td>
-                            <td class="border border-gray-300 px-4 py-2 text-right">{{ number_format($total, 0, ',', '.') }}</td>
+                            <td style="text-align: center;">{{ $no++ }}</td>
+                            <td style="font-weight: bold;">{{ $div }}</td>
+                            <td style="text-align: right;">{{ number_format($total, 0, ',', '.') }}</td>
                         </tr>
                     @endforeach
                 </tbody>
                 <tfoot>
-                    <tr class="bg-gray-200 font-bold">
-                        <td colspan="2" class="border border-gray-300 px-4 py-2 text-right">GRAND TOTAL (Exc. PPN)</td>
-                        <td class="border border-gray-300 px-4 py-2 text-right text-lg">{{ number_format($totalCost, 0, ',', '.') }}</td>
+                    <tr style="background-color: #f3f4f6;">
+                        <td colspan="2" style="text-align: right; font-weight: bold;">GRAND TOTAL (Exc. PPN)</td>
+                        <td style="text-align: right; font-weight: bold; font-size: 16px;">Rp {{ number_format($totalCost, 0, ',', '.') }}</td>
                     </tr>
                 </tfoot>
             </table>
         </div>
 
         <div class="page-break"></div> <div>
-            <h3 class="text-lg font-bold text-gray-800 border-b-2 border-gray-800 mb-4 pb-1">II. BILL OF QUANTITIES (DETAIL)</h3>
+            <div class="border-b-2 border-black mb-4 pb-1 flex justify-between items-end">
+                <span class="text-xs font-bold uppercase">Proyek: {{ $project->name }}</span>
+                <span class="text-xs">Detail Rincian Biaya</span>
+            </div>
+
+            <h3 class="text-base font-bold text-black uppercase mb-2">II. RINCIAN VOLUME DAN BIAYA (DETAIL)</h3>
             
-            <table class="w-full text-xs border-collapse border border-gray-300">
+            <table style="font-size: 11px;">
                 <thead>
-                    <tr class="bg-gray-100">
-                        <th class="border border-gray-300 px-2 py-2 text-left">DESCRIPTION</th>
-                        <th class="border border-gray-300 px-2 py-2 text-center w-16">UNIT</th>
-                        <th class="border border-gray-300 px-2 py-2 text-right w-20">VOL</th>
-                        <th class="border border-gray-300 px-2 py-2 text-right w-24">UNIT PRICE</th>
-                        <th class="border border-gray-300 px-2 py-2 text-right w-28">TOTAL</th>
+                    <tr>
+                        <th style="text-align: left;">URAIAN PEKERJAAN</th>
+                        <th style="width: 40px;">SAT</th>
+                        <th style="width: 60px;">VOL</th>
+                        <th style="width: 90px;">HARGA SATUAN</th>
+                        <th style="width: 100px;">JUMLAH</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($groupedBoq as $division => $items)
-                        <tr class="bg-gray-50 font-bold">
-                            <td colspan="5" class="border border-gray-300 px-2 py-2 text-gray-700 uppercase tracking-wider">
+                        <tr style="background-color: #e5e7eb;">
+                            <td colspan="5" style="font-weight: bold; text-transform: uppercase;">
                                 {{ $division }}
                             </td>
                         </tr>
 
                         @foreach($items as $item)
                             <tr>
-                                <td class="border border-gray-300 px-2 py-1 pl-6">
+                                <td style="padding-left: 15px;">
                                     {{ $item['name'] }}
-                                    <span class="text-[10px] text-gray-400 ml-2 font-mono">({{ $item['code'] }})</span>
+                                    <span style="font-size: 9px; color: #666;">({{ $item['code'] }})</span>
                                 </td>
-                                <td class="border border-gray-300 px-2 py-1 text-center">{{ $item['unit'] }}</td>
-                                <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($item['volume'], 2) }}</td>
-                                <td class="border border-gray-300 px-2 py-1 text-right">{{ number_format($item['unit_price'], 0, ',', '.') }}</td>
-                                <td class="border border-gray-300 px-2 py-1 text-right font-bold">{{ number_format($item['total'], 0, ',', '.') }}</td>
+                                <td style="text-align: center;">{{ $item['unit'] }}</td>
+                                <td style="text-align: right;">{{ number_format($item['volume'], 2) }}</td>
+                                <td style="text-align: right;">{{ number_format($item['unit_price'], 0, ',', '.') }}</td>
+                                <td style="text-align: right; font-weight: bold;">{{ number_format($item['total'], 0, ',', '.') }}</td>
                             </tr>
                         @endforeach
 
-                        <tr class="bg-gray-50">
-                            <td colspan="4" class="border border-gray-300 px-2 py-1 text-right font-bold italic">Sub-Total {{ $division }}</td>
-                            <td class="border border-gray-300 px-2 py-1 text-right font-bold">{{ number_format($items->sum('total'), 0, ',', '.') }}</td>
+                        <tr style="background-color: #f9fafb;">
+                            <td colspan="4" style="text-align: right; font-weight: bold; font-style: italic;">Sub-Total {{ $division }}</td>
+                            <td style="text-align: right; font-weight: bold;">{{ number_format($items->sum('total'), 0, ',', '.') }}</td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
         </div>
 
-        <div class="mt-16 flex justify-between text-center text-sm avoid-break">
-            <div>
-                <p class="mb-20">Prepared By,</p>
-                <p class="font-bold border-b border-black inline-block min-w-[150px]">{{ Auth::user()->name }}</p>
+        <div class="mt-10 flex justify-between text-center text-sm avoid-break">
+            <div style="width: 200px;">
+                <p class="mb-16">Disiapkan Oleh,</p>
+                <p class="font-bold border-b border-black">{{ Auth::user()->name }}</p>
                 <p>Cost Estimator</p>
             </div>
-            <div>
-                <p class="mb-20">Approved By,</p>
-                <p class="font-bold border-b border-black inline-block min-w-[150px]">( ........................... )</p>
+            <div style="width: 200px;">
+                <p class="mb-16">Disetujui Oleh,</p>
+                <p class="font-bold border-b border-black">( ........................... )</p>
                 <p>Project Manager</p>
             </div>
         </div>
