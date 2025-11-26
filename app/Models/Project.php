@@ -8,25 +8,38 @@ use Illuminate\Database\Eloquent\Model;
 class Project extends Model
 {
     use HasFactory;
-    protected $guarded = [];
-    
-    protected $casts = [
-        'debug_logs' => 'array',
-    ];
 
+    protected $guarded = [];
+
+    // Relasi: Milik User siapa?
     public function user()
     {
         return $this->belongsTo(User::class);
     }
+
+    // Relasi: Menggunakan Standar Harga (Library) yang mana?
+    public function costLibrary()
+    {
+        return $this->belongsTo(CostLibrary::class);
+    }
+
+    // --- RELASI BARU ---
+    // Project punya banyak File Revit (Arsitek, Struktur, dll)
+    public function files()
+    {
+        return $this->hasMany(ProjectFile::class);
+    }
     
+    // Project punya banyak Elemen (Shortcut relation)
+    // Karena di tabel model_elements kita simpan project_id, kita bisa akses langsung
     public function elements()
     {
         return $this->hasMany(ModelElement::class);
     }
-
-    // --- TAMBAHAN BARU ---
-    public function costLibrary()
+    
+    // Project punya banyak Hasil Hitungan
+    public function costResults()
     {
-        return $this->belongsTo(CostLibrary::class);
+        return $this->hasMany(CostResult::class);
     }
 }

@@ -8,6 +8,8 @@ use App\Models\Project;
 use App\Services\CostEstimationService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
+use App\Exports\ProjectBoqExport;
+use Maatwebsite\Excel\Facades\Excel; 
 
 class ProjectCostCalculator extends Component
 {
@@ -123,6 +125,15 @@ class ProjectCostCalculator extends Component
                 ];
             });
         });
+    }
+
+    public function exportExcel()
+    {
+        if (!$this->projectId) return;
+        $project = Project::find($this->projectId);
+        $filename = 'BOQ_' . str_replace(' ', '_', $project->name) . '.xlsx';
+        
+        return Excel::download(new ProjectBoqExport($this->projectId), $filename);
     }
 
     private function resetResults() {

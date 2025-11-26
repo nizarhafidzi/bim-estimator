@@ -8,6 +8,7 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Auth;
+use App\Exports\LibraryExport;
 
 class CostLibraryManager extends Component
 {
@@ -78,6 +79,11 @@ class CostLibraryManager extends Component
     {
         CostLibrary::find($id)->delete();
         $this->loadLibraries();
+    }
+
+    public function exportLibrary($id)
+    {
+        return Excel::download(new LibraryExport($id), 'Library_Export.xlsx');
     }
 
     public function render()

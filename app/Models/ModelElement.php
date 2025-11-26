@@ -12,12 +12,19 @@ class ModelElement extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'raw_properties' => 'array',
+        'raw_properties' => 'array', // Agar JSON properti terbaca array
     ];
 
-    // Relasi ke Project
+    // Relasi ke Project Header (Gedung)
     public function project()
     {
         return $this->belongsTo(Project::class);
+    }
+
+    // --- RELASI BARU ---
+    // Relasi ke File Asal (Misal: File Struktur.rvt)
+    public function file()
+    {
+        return $this->belongsTo(ProjectFile::class, 'project_file_id');
     }
 }

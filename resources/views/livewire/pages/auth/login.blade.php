@@ -26,7 +26,7 @@ new #[Layout('layouts.guest')] class extends Component
 
 <div class="min-h-screen flex bg-white">
     
-    <div class="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24 bg-white w-full lg:w-[480px] z-10">
+    <div class="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:flex-none lg:px-25 xl:px-30 bg-white w-full lg:w-[480px] z-10">
         <div class="mx-auto w-full max-w-sm lg:w-96">
             
             <div class="flex items-center gap-2 mb-10">

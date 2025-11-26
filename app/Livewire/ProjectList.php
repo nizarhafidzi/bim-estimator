@@ -3,53 +3,46 @@
 namespace App\Livewire;
 
 use App\Models\Project;
+use App\Models\CostLibrary;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class ProjectList extends Component
 {
-    protected $listeners = ['projectImported' => '$refresh'];
-    
-    // Variable untuk Modal Log
-    public $selectedProjectLogs = null;
-    public $showLogModal = false;
-    public $logProjectId = null;
+    // Form Create Project
+    public $showCreateModal = false;
+    public $newName, $newLibraryId;
 
-    public function render()
+    public function createProject()
     {
-        return view('livewire.project-list', [
-            'projects' => Project::where('user_id', Auth::id())
-                        ->orderBy('created_at', 'desc')
-                        ->get()
+        $this->validate([
+            'newName' => 'required|string|max:255',
+            'newLibraryId' => 'required|exists:cost_libraries,id',
         ]);
+
+        Project::create([
+            'user_id' => Auth::id(),
+            'name' => $this->newName,
+            'cost_library_id' => $this->newLibraryId
+        ]);
+
+        $this->reset(['newName', 'newLibraryId', 'showCreateModal']);
+        session()->flash('message', 'Project Header created! Now add files inside.');
     }
-    
+
     public function deleteProject($id)
     {
         Project::find($id)->delete();
     }
 
-    // Action saat tombol "Show Log" diklik
-    public function viewLogs($projectId)
+    public function render()
     {
-        $this->logProjectId = $projectId;
-        $this->showLogModal = true;
-        $this->refreshLogs();
-    }
-
-    // Action untuk update isi log (polling)
-    public function refreshLogs()
-    {
-        if ($this->logProjectId) {
-            $project = Project::find($this->logProjectId);
-            $this->selectedProjectLogs = $project ? $project->debug_logs : [];
-        }
-    }
-
-    public function closeLogs()
-    {
-        $this->showLogModal = false;
-        $this->selectedProjectLogs = null;
-        $this->logProjectId = null;
+        return view('livewire.project-list', [
+            'projects' => Project::where('user_id', Auth::id())
+                            ->withCount('files') // Hitung jumlah file di dalamnya
+                            ->with('costLibrary')
+                            ->orderBy('created_at', 'desc')->get(),
+            'libraries' => CostLibrary::where('user_id', Auth::id())->get()
+        ]);
     }
 }

@@ -145,27 +145,23 @@ class AccProjectBrowser extends Component
     }
 
     // --- Import Action ---
-    public function importFile($itemId, $itemName)
+    public function selectFile($itemId, $itemName)
     {
+        // Ambil URN Version
         $token = $this->getToken();
         $response = Http::withToken($token)->get("https://developer.api.autodesk.com/data/v1/projects/{$this->currentProjectId}/items/{$itemId}/tip");
         
         if ($response->successful()) {
             $versionData = $response->json();
-            $urnVersion = $versionData['data']['id'];
+            $urnVersion = $versionData['data']['id']; // URN Version
 
-            $project = Project::create([
-                'user_id' => Auth::id(),
-                'acc_project_id' => $this->currentProjectId,
-                'urn' => base64_encode($urnVersion),
-                'name' => $itemName,
-                'status' => 'processing',
-            ]);
-
-            FetchAccMetadata::dispatch($project, Auth::user());
-
-            session()->flash('status', "Importing '$itemName' started...");
-            return redirect()->route('dashboard');
+            // PENTING: Kirim Event ke Parent Component (ProjectFileManage)
+            $this->dispatch('file-selected-from-acc', 
+                urn: base64_encode($urnVersion), 
+                name: $itemName
+            );
+            
+            session()->flash('status', "File '$itemName' selected. Processing...");
         } else {
             $this->errorMsg = "Failed to get file version.";
         }

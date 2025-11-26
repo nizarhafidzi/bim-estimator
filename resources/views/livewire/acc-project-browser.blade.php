@@ -84,14 +84,17 @@
                         </div>
 
                         @if(!$isContainer)
-                            <button wire:click="importFile('{{ $id }}', '{{ $name }}')"
+                            <button wire:click="selectFile('{{ $id }}', '{{ $name }}')"
                                     wire:loading.attr="disabled"
                                     class="text-xs bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 shadow-sm whitespace-nowrap flex items-center gap-2 disabled:opacity-50">
-                                <svg wire:loading wire:target="importFile" class="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                
+                                <svg wire:loading wire:target="selectFile" class="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
-                                Import
+                                
+                                <span wire:loading.remove wire:target="selectFile">Select File</span>
+                                <span wire:loading wire:target="selectFile">Processing...</span>
                             </button>
                         @else
                             <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>

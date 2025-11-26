@@ -72,16 +72,24 @@
                             </form>
                         </div>
                     @else
+                    <div class="flex gap-2 mt-2">
+                        <a href="{{ route('resource-manager', $lib->id) }}" class="flex-1 text-center border border-gray-300 px-2 py-1 text-xs rounded hover:bg-gray-50">
+                            Manage Resources
+                        </a>
+                        <button wire:click="exportLibrary({{ $lib->id }})" class="flex-1 text-center border border-gray-300 px-2 py-1 text-xs rounded hover:bg-gray-50">
+                            Export Excel
+                        </button>
+                    </div>
                         <button wire:click="openImportModal({{ $lib->id }})" class="w-full flex items-center justify-center gap-2 border border-blue-200 text-blue-700 bg-blue-50/50 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
                             Import Excel Data
                         </button>
                     @endif
                     
-                    <button disabled class="w-full border border-gray-200 text-gray-400 py-2 rounded-lg text-sm font-bold cursor-not-allowed flex items-center justify-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                        Open Builder (Soon)
-                    </button>
+                    <a href="{{ route('ahsp-builder', $lib->id) }}" class="flex-1 text-center bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded-md text-sm hover:bg-gray-50 font-bold flex items-center justify-center gap-2 transition shadow-sm">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        Open Builder
+                    </a>
                 </div>
             </div>
         @endforeach
