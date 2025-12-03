@@ -163,7 +163,7 @@
                 <p class="text-slate-400 text-sm mt-1">Building Information Modeling Cost Estimation</p>
             </div>
             <p class="text-slate-500 text-sm">
-                &copy; {{ date('Y') }} Powered by Laravel & Autodesk Platform Services.
+                &copy; {{ date('Y') }} Powered by nizarhafidzi.
             </p>
         </div>
     </footer>

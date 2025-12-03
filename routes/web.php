@@ -13,6 +13,7 @@ use App\Livewire\AhspBuilder;
 use App\Livewire\ResourceManager;
 use App\Livewire\ProjectFileManage;
 use App\Livewire\ProjectReport;
+use App\Livewire\Documentation;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,6 +25,8 @@ use App\Livewire\ProjectReport;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+
+Route::get('/docs', Documentation::class)->name('documentation');
 
 Route::view('/', 'welcome');
 
