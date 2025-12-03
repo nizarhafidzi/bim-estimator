@@ -14,6 +14,9 @@ use App\Livewire\ResourceManager;
 use App\Livewire\ProjectFileManage;
 use App\Livewire\ProjectReport;
 use App\Livewire\Documentation;
+use App\Livewire\Compliance\RuleManager;
+use App\Livewire\Compliance\CheckDashboard;
+use App\Livewire\Compliance\ComplianceReport;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,6 +28,10 @@ use App\Livewire\Documentation;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+
+Route::get('/file/{fileId}/compliance/report', ComplianceReport::class)
+    ->middleware(['auth'])
+    ->name('compliance.report.print');
 
 Route::get('/docs', Documentation::class)->name('documentation');
 
@@ -65,6 +72,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/auth/autodesk/redirect', [AutodeskAuthController::class, 'redirect'])->name('autodesk.login');
     Route::get('/auth/autodesk/callback', [AutodeskAuthController::class, 'callback']); // URL ini harus sama persis dengan .env
     Route::post('/auth/autodesk/disconnect', [AutodeskAuthController::class, 'disconnect'])->name('autodesk.disconnect');
+    Route::get('/project/{projectId}/rules', RuleManager::class)->name('compliance.rules');
+    Route::get('/file/{fileId}/compliance', CheckDashboard::class)->middleware(['auth'])->name('compliance.dashboard');
 });
 
 Route::post('logout', function (Logout $logout) {

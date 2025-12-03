@@ -27,4 +27,10 @@ class ProjectFile extends Model
     {
         return $this->hasMany(ModelElement::class);
     }
+
+    // Relasi ke Hasil Validasi (Modul Compliance)
+    public function validationResults()
+    {
+        return $this->hasMany(ValidationResult::class);
+    }
 }

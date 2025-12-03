@@ -42,4 +42,10 @@ class Project extends Model
     {
         return $this->hasMany(CostResult::class);
     }
+
+    // Relasi ke Rule Sets (Modul Compliance)
+    public function ruleSets()
+    {
+        return $this->hasMany(RuleSet::class);
+    }
 }

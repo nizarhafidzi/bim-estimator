@@ -27,4 +27,10 @@ class ModelElement extends Model
     {
         return $this->belongsTo(ProjectFile::class, 'project_file_id');
     }
+
+    // Relasi ke history validasi elemen ini
+    public function validationResults()
+    {
+        return $this->hasMany(ValidationResult::class);
+    }
 }
