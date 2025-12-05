@@ -212,12 +212,23 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Revit Category</label>
-                                <input type="text" wire:model="category" class="w-full border-gray-300 rounded-lg text-sm shadow-sm" placeholder="e.g. Walls">
+                                <input type="text" wire:model="category" list="categoryList" class="w-full border-gray-300 rounded-lg text-sm shadow-sm" placeholder="Type to search...">
+                                <datalist id="categoryList">
+                                    @foreach($suggestedCategories as $cat)
+                                        <option value="{{ $cat }}">
+                                    @endforeach
+                                </datalist>
                                 @error('category') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                             </div>
+
                             <div>
                                 <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Parameter Name</label>
-                                <input type="text" wire:model="param" class="w-full border-gray-300 rounded-lg text-sm shadow-sm" placeholder="e.g. Fire Rating">
+                                <input type="text" wire:model="param" list="paramList" class="w-full border-gray-300 rounded-lg text-sm shadow-sm" placeholder="Type to search...">
+                                <datalist id="paramList">
+                                    @foreach($suggestedParameters as $p)
+                                        <option value="{{ $p }}">
+                                    @endforeach
+                                </datalist>
                                 @error('param') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                             </div>
                         </div>
@@ -246,12 +257,12 @@
 
                         <div>
                             <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Fail Message / Desc</label>
-                            <textarea wire:model="desc" rows="2" class="w-full border-gray-300 rounded-lg text-sm shadow-sm" placeholder="Error message shown in report..."></textarea>
+                            <textarea wire:model="desc" rows="2" class="w-full border-gray-300 rounded-lg text-sm shadow-sm" placeholder="Pesan error jika validasi gagal..."></textarea>
                         </div>
                     </div>
 
                     <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-100">
-                        <button wire:click="$set('showModal', false)" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 transition">Cancel</button>
+                        <button wire:click="$set('showModal', false)" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50">Cancel</button>
                         <button wire:click="saveRule" class="px-6 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 shadow-md transition transform active:scale-95">
                             {{ $isEditing ? 'Update Rule' : 'Save Rule' }}
                         </button>
@@ -259,6 +270,5 @@
                 </div>
             </div>
         @endif
-
     </div>
 </div>

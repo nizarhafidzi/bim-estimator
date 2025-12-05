@@ -6,8 +6,9 @@ use App\Actions\RunComplianceCheck;
 use App\Models\Project;
 use App\Models\RuleSet;
 use App\Models\ComplianceRule;
+use App\Models\ModelElement; // Tambahkan ini
 use App\Imports\RulesImport;
-use App\Exports\RuleTemplateExport; // Added for template download
+use App\Exports\RuleTemplateExport;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Maatwebsite\Excel\Facades\Excel;
@@ -20,18 +21,22 @@ class RuleManager extends Component
     public $ruleSets;
     public $activeRuleSetId;
 
+    // Data Suggestion (Saran Otomatis)
+    public $suggestedCategories = [];
+    public $suggestedParameters = [];
+
     // Form Create Rule Set
-    public $name, $description; // For Rule Set
+    public $name, $description;
     public $showCreateModal = false;
 
     // Form Import
     public $excelFile;
 
-    // Form Manual Rule (Missing in your snippet)
+    // Form Manual Rule
     public $isEditing = false;
-    public $showModal = false; // For Rule Modal
+    public $showModal = false;
     public $ruleId;
-    public $category, $param, $operator, $val, $desc; // Rule fields
+    public $category, $param, $operator, $val, $desc;
 
     // Validation Target
     public $targetFileId;
@@ -42,6 +47,47 @@ class RuleManager extends Component
     {
         $this->project = Project::findOrFail($projectId);
         $this->loadRuleSets();
+        
+        // LOAD SARAN OTOMATIS
+        $this->loadSuggestions();
+    }
+
+    // --- LOGIC BARU: AUTO SUGGEST ---
+    public function loadSuggestions()
+    {
+        // 1. Ambil Kategori Unik dari Project ini
+        $this->suggestedCategories = ModelElement::where('project_id', $this->project->id)
+            ->whereNotNull('category')
+            ->select('category')
+            ->distinct()
+            ->orderBy('category')
+            ->pluck('category')
+            ->toArray();
+
+        // 2. Ambil Parameter (Sampling 50 elemen acak agar cepat)
+        // Kita tidak perlu cek jutaan elemen, cukup sampel saja karena parameternya biasanya seragam
+        $samples = ModelElement::where('project_id', $this->project->id)
+            ->whereNotNull('raw_properties')
+            ->inRandomOrder()
+            ->limit(50)
+            ->get();
+
+        $params = [];
+        foreach ($samples as $el) {
+            if (is_array($el->raw_properties)) {
+                foreach ($el->raw_properties as $group => $props) {
+                    if (is_array($props)) {
+                        // Ambil key (nama parameter)
+                        foreach (array_keys($props) as $key) {
+                            $params[$key] = true; // Pakai key array agar unik otomatis
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Sortir A-Z
+        $this->suggestedParameters = collect(array_keys($params))->sort()->values()->toArray();
     }
 
     public function loadRuleSets()
@@ -50,19 +96,15 @@ class RuleManager extends Component
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Auto-select first rule set
         if (!$this->activeRuleSetId && $this->ruleSets->isNotEmpty()) {
             $this->activeRuleSetId = $this->ruleSets->first()->id;
         }
     }
 
     // --- RULE SET MANAGEMENT ---
-
     public function createRuleSet()
     {
-        $this->validate([
-            'name' => 'required|string|max:255',
-        ]);
+        $this->validate(['name' => 'required|string|max:255']);
 
         $set = RuleSet::create([
             'project_id' => $this->project->id,
@@ -84,7 +126,6 @@ class RuleManager extends Component
     }
 
     // --- EXCEL OPERATIONS ---
-
     public function downloadTemplate()
     {
         return Excel::download(new RuleTemplateExport, 'compliance_rules_template.xlsx');
@@ -98,11 +139,7 @@ class RuleManager extends Component
         ]);
 
         try {
-            // Optional: Clear existing rules in this set before import
-            // ComplianceRule::where('rule_set_id', $this->activeRuleSetId)->delete();
-
             Excel::import(new RulesImport($this->activeRuleSetId), $this->excelFile);
-            
             $this->reset('excelFile');
             session()->flash('message', 'Rules imported successfully!');
         } catch (\Exception $e) {
@@ -110,8 +147,7 @@ class RuleManager extends Component
         }
     }
 
-    // --- MANUAL RULE CRUD (Missing Logic Added) ---
-
+    // --- MANUAL RULE CRUD ---
     public function openModal()
     {
         $this->resetInput();
@@ -127,8 +163,7 @@ class RuleManager extends Component
         $this->param = $rule->parameter;
         $this->operator = $rule->operator;
         $this->val = $rule->value;
-        $this->desc = $rule->description; // Assuming description field maps to $desc
-
+        $this->desc = $rule->description;
         $this->isEditing = true;
         $this->showModal = true;
     }
@@ -174,33 +209,33 @@ class RuleManager extends Component
     }
 
     // --- VALIDATION EXECUTION ---
-
+    
     public function updatedTargetFileId()
     {
         $this->reset(['lastCheckDate', 'hasResults']);
 
         if ($this->targetFileId) {
-            // Cek apakah ada data di tabel validation_results untuk file ini
             $lastResult = \App\Models\ValidationResult::where('project_file_id', $this->targetFileId)
                             ->latest()
                             ->first();
 
             if ($lastResult) {
                 $this->hasResults = true;
-                $this->lastCheckDate = $lastResult->created_at->format('d M Y, H:i'); // Contoh: 03 Dec 2025, 14:30
+                $this->lastCheckDate = $lastResult->created_at->format('d M Y, H:i');
             }
         }
     }
 
     public function runValidation(RunComplianceCheck $action)
     {
-        // ... (Kode validasi lama) ...
-        
+        $this->validate([
+            'activeRuleSetId' => 'required',
+            'targetFileId' => 'required'
+        ]);
+
         $count = $action->execute($this->targetFileId, $this->activeRuleSetId);
         
-        // Update status setelah run selesai
-        $this->updatedTargetFileId(); 
-        
+        $this->updatedTargetFileId(); // Refresh status
         session()->flash('message', "Validation Complete! Processed $count elements.");
     }
 

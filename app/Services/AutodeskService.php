@@ -9,72 +9,41 @@ use Illuminate\Support\Facades\Log;
 
 class AutodeskService
 {
-    // Base URL untuk APS V2
     protected $baseUrl = 'https://developer.api.autodesk.com';
 
-    /**
-     * ==========================================
-     * BAGIAN 1: AUTHENTICATION (Login & Token)
-     * ==========================================
-     */
-
-    /**
-     * Mendapatkan URL Authorization untuk redirect user.
-     */
+    // --- 1. AUTHENTICATION ---
     public function getAuthorizationUrl()
     {
         $params = [
             'response_type' => 'code',
             'client_id' => env('APS_CLIENT_ID'),
             'redirect_uri' => env('APS_CALLBACK_URL'),
-            // Scope lengkap untuk membaca data, menulis (jika perlu), melihat viewer, dan profil user
             'scope' => 'data:read data:write viewables:read user:read',
-            'prompt' => 'login' // Wajib ada agar user bisa switch account
+            'prompt' => 'login'
         ];
-
         return $this->baseUrl . '/authentication/v2/authorize?' . http_build_query($params);
     }
 
-    /**
-     * Menukar Authorization Code dengan Access Token.
-     */
     public function getUserToken($code)
     {
-        $response = Http::asForm()->post($this->baseUrl . '/authentication/v2/token', [
+        return Http::asForm()->post($this->baseUrl . '/authentication/v2/token', [
             'grant_type' => 'authorization_code',
             'code' => $code,
             'client_id' => env('APS_CLIENT_ID'),
             'client_secret' => env('APS_CLIENT_SECRET'),
             'redirect_uri' => env('APS_CALLBACK_URL'),
-        ]);
-
-        return $response->json();
+        ])->json();
     }
 
-    /**
-     * Mendapatkan token valid dari User.
-     * Jika token akan expired < 5 menit, otomatis refresh.
-     */
     public function getValidUserToken(User $user)
     {
-        // Jika token belum ada, kembalikan null (perlu login)
-        if (!$user->token_expires_at) {
-            return null;
-        }
-
-        // Cek apakah token expired dalam 5 menit ke depan
-        $expiresAt = Carbon::parse($user->token_expires_at);
-        if (now()->addMinutes(5)->greaterThanOrEqualTo($expiresAt)) {
+        if (!$user->token_expires_at) return null;
+        if (now()->addMinutes(5)->greaterThanOrEqualTo($user->token_expires_at)) {
             return $this->refreshUserToken($user);
         }
-
         return $user->autodesk_access_token;
     }
 
-    /**
-     * Refresh Token Logic (API V2).
-     * Update database user secara langsung di sini.
-     */
     public function refreshUserToken(User $user)
     {
         $response = Http::asForm()->post($this->baseUrl . '/authentication/v2/token', [
@@ -91,7 +60,6 @@ class AutodeskService
 
         $data = $response->json();
 
-        // Update User DB Secara Langsung
         $user->update([
             'autodesk_access_token' => $data['access_token'],
             'autodesk_refresh_token' => $data['refresh_token'],
@@ -101,95 +69,48 @@ class AutodeskService
         return $data['access_token'];
     }
 
-    /**
-     * ==========================================
-     * BAGIAN 2: MODEL DERIVATIVE (Proses Data)
-     * ==========================================
-     */
-
-    /**
-     * Helper: Membuat URN menjadi URL-Safe Base64.
-     * API Model Derivative mewajibkan format ini (tanpa padding '=').
-     */
+    // --- 2. MODEL DERIVATIVE ---
+    
     private function makeSafeUrn($urn)
     {
-        // Jika URN masuk masih ada prefix 'urn:', kita anggap belum di-encode sama sekali
-        if (str_starts_with($urn, 'urn:')) {
-            $urn = base64_encode($urn);
-        }
-        
-        // Ganti karakter +/ dengan -_ dan hapus padding =
+        if (str_starts_with($urn, 'urn:')) $urn = base64_encode($urn);
         return rtrim(strtr($urn, '+/', '-_'), '=');
     }
 
-    /**
-     * Cek Status Manifest (Apakah model sudah siap/translated?).
-     */
     public function getManifest($urn, $token)
     {
         $safeUrn = $this->makeSafeUrn($urn);
-        
         return Http::withToken($token)
             ->get($this->baseUrl . "/modelderivative/v2/designdata/{$safeUrn}/manifest")
             ->json();
     }
 
-    /**
-     * Trigger Translation (Memaksa Autodesk meng-generate SVF/Data).
-     * Digunakan jika status manifest 'n/a' atau 'failed'.
-     */
     public function translateToSvf($urn, $token)
     {
         $safeUrn = $this->makeSafeUrn($urn);
-
         $body = [
-            'input' => [
-                'urn' => $safeUrn
-            ],
-            'output' => [
-                'formats' => [
-                    [
-                        'type' => 'svf', 
-                        'views' => ['2d', '3d'] // Generate view 2D dan 3D
-                    ]
-                ],
-                'destination' => [
-                    'region' => 'us' // Region default US
-                ]
-            ]
+            'input' => ['urn' => $safeUrn],
+            'output' => [['type' => 'svf', 'views' => ['2d', '3d']]],
+            'destination' => ['region' => 'us']
         ];
-
-        return Http::withToken($token)
-            ->withHeaders(['x-ads-force' => 'true']) // Header wajib untuk memaksa job
-            ->post($this->baseUrl . "/modelderivative/v2/designdata/job", $body)
-            ->json();
+        return Http::withToken($token)->withHeaders(['x-ads-force' => 'true'])
+            ->post($this->baseUrl . "/modelderivative/v2/designdata/job", $body)->json();
     }
 
     /**
-     * Helper: Ambil Properties lengkap dari Model
-     * Return: ['status' => 'success|processing|error', 'data' => ..., 'message' => ...]
+     * HYBRID FETCH PROPERTIES: Direct Download + Auto-Chunking Fallback
      */
     public function fetchModelProperties($urn, $token)
     {
         $safeUrn = $this->makeSafeUrn($urn);
 
-        // 1. Ambil Metadata (List Views)
-        $metaResponse = Http::withToken($token)
-            ->get($this->baseUrl . "/modelderivative/v2/designdata/{$safeUrn}/metadata");
+        // A. Cari View GUID (3D) - Logika Lama yang Terbukti Benar
+        $metaResponse = Http::withToken($token)->get($this->baseUrl . "/modelderivative/v2/designdata/{$safeUrn}/metadata");
+        if ($metaResponse->failed()) return ['status' => 'error', 'message' => 'Gagal ambil metadata view.'];
 
-        if ($metaResponse->failed()) {
-            return ['status' => 'error', 'message' => "Gagal list view: " . $metaResponse->status()];
-        }
-
-        $metaData = $metaResponse->json();
-        $views = $metaData['data']['metadata'] ?? [];
-
-        // DEBUG: Log daftar view yang ditemukan ke Laravel Log (bisa dicek jika masih error)
-        \Log::info("Views found for URN {$safeUrn}: " . count($views));
-
-        // 2. Cari View GUID untuk scene 3D utama
+        $views = $metaResponse->json()['data']['metadata'] ?? [];
         $viewGuid = null;
-        
+
         // Prioritas 1: Cari role '3d'
         foreach ($views as $view) {
             if (isset($view['role']) && $view['role'] === '3d') {
@@ -198,7 +119,7 @@ class AutodeskService
             }
         }
 
-        // Prioritas 2: Fallback ke view pertama jika tidak ada tag 3d
+        // Prioritas 2: Fallback ke view pertama
         if (!$viewGuid && count($views) > 0) {
             $viewGuid = $views[0]['guid'];
         }
@@ -207,23 +128,109 @@ class AutodeskService
             return ['status' => 'error', 'message' => "Tidak ditemukan View 3D. Total views: " . count($views)];
         }
 
-        // 3. Ambil Properties menggunakan GUID tersebut
-        $propResponse = Http::withToken($token)
-            ->get($this->baseUrl . "/modelderivative/v2/designdata/{$safeUrn}/metadata/{$viewGuid}/properties");
+        Log::info("🎯 Selected View GUID: $viewGuid for URN: $safeUrn");
 
-        // HANDLE 202 ACCEPTED (Masih Processing)
+        // B. Coba Download Langsung (Cara Cepat)
+        $url = $this->baseUrl . "/modelderivative/v2/designdata/{$safeUrn}/metadata/{$viewGuid}/properties";
+        
+        // PENTING: Tambahkan forceget=true untuk menghindari cache lama yang mungkin corrupt
+        $propResponse = Http::withToken($token)
+            ->timeout(600) 
+            ->get($url . '?forceget=true');
+
+        // C. JIKA ERROR 413 (Payload Too Large) -> PINDAH KE CHUNKING
+        if ($propResponse->status() == 413) {
+            Log::info("⚠️ Payload Too Large (413). Switching to Chunking Mode...");
+            return $this->fetchPropertiesChunked($safeUrn, $viewGuid, $token);
+        }
+
         if ($propResponse->status() == 202) {
             return ['status' => 'processing', 'message' => "Autodesk sedang indexing properties (202)."];
         }
 
         if ($propResponse->failed()) {
-             // Payload terlalu besar (413) atau error lain
-             $msg = "Gagal download properties. Code: " . $propResponse->status();
-             if ($propResponse->status() == 413) $msg .= " (File terlalu besar)";
-             
-             return ['status' => 'error', 'message' => $msg];
+             return ['status' => 'error', 'message' => "Gagal download properties. Code: " . $propResponse->status()];
         }
 
+        // D. Sukses Direct Download
         return ['status' => 'success', 'data' => $propResponse->json()];
     }
-}
+
+    /**
+     * FUNGSI CHUNKING: Solusi untuk File Besar
+     */
+    public function fetchPropertiesChunked($urn, $viewGuid, $token)
+    {
+        // 1. Ambil Object Tree (Daftar ID) - Ini endpoint ringan yang jarang error 413
+        $treeUrl = $this->baseUrl . "/modelderivative/v2/designdata/{$urn}/metadata/{$viewGuid}";
+        $treeResp = Http::withToken($token)->get($treeUrl . '?forceget=true');
+        
+        if ($treeResp->failed()) {
+            return ['status' => 'error', 'message' => 'Gagal ambil Object Tree untuk chunking: ' . $treeResp->status()];
+        }
+        
+        // 2. Ratakan (Flatten) Tree untuk dapat semua Object ID
+        $allIds = [];
+        $objects = $treeResp->json()['data']['objects'] ?? [];
+        $this->flattenObjectIds($objects, $allIds);
+        
+        Log::info("📦 Chunking Mode: Found " . count($allIds) . " object IDs.");
+        
+        if (count($allIds) == 0) {
+             return ['status' => 'error', 'message' => 'Object Tree kosong. View mungkin tidak memiliki elemen.'];
+        }
+
+        // 3. Download Properti per Batch (200 ID per request cukup aman)
+        $chunks = array_chunk($allIds, 200); 
+        $combinedCollection = [];
+        $successCount = 0;
+        
+        foreach ($chunks as $index => $chunkIds) {
+            // Gunakan endpoint POST untuk minta ID spesifik
+            $postUrl = $this->baseUrl . "/modelderivative/v2/designdata/{$urn}/metadata/{$viewGuid}/properties";
+            
+            try {
+                $batchResp = Http::withToken($token)->post($postUrl, [
+                    'objectids' => $chunkIds
+                ]);
+
+                if ($batchResp->successful()) {
+                    $batchData = $batchResp->json()['data']['collection'] ?? [];
+                    $combinedCollection = array_merge($combinedCollection, $batchData);
+                    $successCount++;
+                    
+                    if ($index % 5 == 0) Log::info("⬇️ Batch " . ($index + 1) . "/" . count($chunks) . " downloaded.");
+                } else {
+                    Log::warning("⚠️ Batch $index failed: " . $batchResp->status());
+                }
+            } catch (\Exception $e) {
+                Log::warning("⚠️ Exception on batch $index: " . $e->getMessage());
+            }
+        }
+        
+        Log::info("✅ Chunking Complete. Total Objects Retrieved: " . count($combinedCollection));
+
+        // Kembalikan format yang SAMA PERSIS dengan respons API standar
+        return [
+            'status' => 'success',
+            'data' => [
+                'data' => [
+                    'collection' => $combinedCollection
+                ]
+            ]
+        ];
+    }
+
+    // Helper Rekursif
+    private function flattenObjectIds($nodes, &$ids)
+    {
+        foreach ($nodes as $node) {
+            if (isset($node['objectid'])) {
+                $ids[] = $node['objectid'];
+            }
+            if (isset($node['objects'])) {
+                $this->flattenObjectIds($node['objects'], $ids);
+            }
+        }
+    }
+}  
