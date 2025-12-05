@@ -3,16 +3,17 @@
 namespace App\Livewire;
 
 use App\Models\Project;
-use App\Models\CostLibrary;
+use App\Models\CostLibrary; // Tambahkan ini
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class ProjectList extends Component
 {
-    // Form Create Project
+    // Properti Modal
     public $showCreateModal = false;
     public $newName, $newLibraryId;
 
+    // Method Create Project
     public function createProject()
     {
         $this->validate([
@@ -23,11 +24,14 @@ class ProjectList extends Component
         Project::create([
             'user_id' => Auth::id(),
             'name' => $this->newName,
-            'cost_library_id' => $this->newLibraryId
+            'cost_library_id' => $this->newLibraryId,
+            'description' => 'Project created via Dashboard' // Default description
         ]);
 
         $this->reset(['newName', 'newLibraryId', 'showCreateModal']);
-        session()->flash('message', 'Project Header created! Now add files inside.');
+        
+        // Kirim event update jika diperlukan
+        $this->dispatch('project-created');
     }
 
     public function deleteProject($id)
@@ -39,10 +43,12 @@ class ProjectList extends Component
     {
         return view('livewire.project-list', [
             'projects' => Project::where('user_id', Auth::id())
-                            ->withCount('files') // Hitung jumlah file di dalamnya
+                            ->withCount('files')
                             ->with('costLibrary')
                             ->orderBy('created_at', 'desc')->get(),
-            'libraries' => CostLibrary::where('user_id', Auth::id())->get()
+            
+            // Kirim data libraries untuk dropdown
+            'libraries' => CostLibrary::where('user_id', Auth::id())->get() 
         ]);
     }
 }

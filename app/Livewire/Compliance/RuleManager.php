@@ -35,6 +35,8 @@ class RuleManager extends Component
 
     // Validation Target
     public $targetFileId;
+    public $lastCheckDate = null;
+    public $hasResults = false;
 
     public function mount($projectId)
     {
@@ -173,16 +175,33 @@ class RuleManager extends Component
 
     // --- VALIDATION EXECUTION ---
 
+    public function updatedTargetFileId()
+    {
+        $this->reset(['lastCheckDate', 'hasResults']);
+
+        if ($this->targetFileId) {
+            // Cek apakah ada data di tabel validation_results untuk file ini
+            $lastResult = \App\Models\ValidationResult::where('project_file_id', $this->targetFileId)
+                            ->latest()
+                            ->first();
+
+            if ($lastResult) {
+                $this->hasResults = true;
+                $this->lastCheckDate = $lastResult->created_at->format('d M Y, H:i'); // Contoh: 03 Dec 2025, 14:30
+            }
+        }
+    }
+
     public function runValidation(RunComplianceCheck $action)
     {
-        $this->validate([
-            'activeRuleSetId' => 'required',
-            'targetFileId' => 'required'
-        ]);
-
+        // ... (Kode validasi lama) ...
+        
         $count = $action->execute($this->targetFileId, $this->activeRuleSetId);
         
-        session()->flash('message', "Validation Complete! Processed $count elements. Check Dashboard for results.");
+        // Update status setelah run selesai
+        $this->updatedTargetFileId(); 
+        
+        session()->flash('message', "Validation Complete! Processed $count elements.");
     }
 
     public function render()

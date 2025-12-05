@@ -90,7 +90,7 @@
         <div class="text-xs">
             <h3 class="text-sm font-bold uppercase mb-2">Detailed Validation Results</h3>
             
-            @foreach($results as $category => $items)
+            @foreach($groupedResults as $category => $items)
                 <div class="mb-4 break-inside-avoid">
                     <div class="bg-gray-200 px-2 py-1 font-bold border border-black border-b-0">{{ $category }}</div>
                     <table>

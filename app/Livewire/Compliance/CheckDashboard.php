@@ -15,46 +15,44 @@ class CheckDashboard extends Component
 
     public $fileId;
     public $file;
+    public $viewerToken;
     
-    // PROPERTI PENTING YANG HILANG
-    public $viewerToken; 
-    
+    // Filter UI
     public $filterStatus = 'fail'; 
     public $searchRule = '';
 
-    // Data untuk JS
+    // Data JS
     public $failedIds = [];
     public $passedIds = [];
+    
+    // Statistik
+    public $stats = [
+        'total' => 0,
+        'pass' => 0,
+        'fail' => 0
+    ];
 
     public function mount($fileId)
     {
-        $this->file = ProjectFile::findOrFail($fileId);
         $this->fileId = $fileId;
-        
-        // 1. AMBIL TOKEN (WAJIB AGAR VIEWER JALAN)
+        $this->file = ProjectFile::findOrFail($fileId);
+
+        // 1. Get Token
         $service = app(AutodeskService::class);
         $this->viewerToken = $service->getValidUserToken(Auth::user());
-        // -------------------------------------------
-    }
-    public function render()
-    {
-        // 1. Statistik Ringkas
-        $stats = [
-            'total' => ValidationResult::where('project_file_id', $this->fileId)->count(),
-            'pass' => ValidationResult::where('project_file_id', $this->fileId)->where('status', 'pass')->count(),
-            'fail' => ValidationResult::where('project_file_id', $this->fileId)->where('status', 'fail')->count(),
-        ];
 
-        // 2. Query Data Tabel
-        $query = ValidationResult::with(['rule', 'element'])
-                    ->where('project_file_id', $this->fileId);
+        // 2. Hitung Statistik (Query Ringan)
+        // Gunakan where langsung ke DB, bukan collection count
+        $this->stats['total'] = ValidationResult::where('project_file_id', $fileId)->count();
+        $this->stats['pass'] = ValidationResult::where('project_file_id', $fileId)->where('status', 'pass')->count();
+        $this->stats['fail'] = ValidationResult::where('project_file_id', $fileId)->where('status', 'fail')->count();
 
-        $allResults = ValidationResult::with('element')
-                        ->where('project_file_id', $this->fileId)
+        // 3. Ambil Semua ID untuk Pewarnaan 3D (Query Khusus ID saja biar cepat)
+        // Select spesifik kolom agar hemat memori
+        $allResults = ValidationResult::where('project_file_id', $fileId)
+                        ->with('element:id,external_id') // Eager load element ID only
+                        ->select('id', 'model_element_id', 'status')
                         ->get();
-
-        $this->failedIds = [];
-        $this->passedIds = [];
 
         foreach ($allResults as $res) {
             if ($res->element) {
@@ -66,26 +64,38 @@ class CheckDashboard extends Component
                 }
             }
         }
+    }
 
+    public function render()
+    {
+        // 4. Query Tabel (Paginated)
+        // Mulai dari Model::query() agar objeknya Builder, bukan Collection
+        $query = ValidationResult::query()
+                    ->with(['rule', 'element']) // Eager Load
+                    ->where('project_file_id', $this->fileId);
+
+        // Filter Status
         if ($this->filterStatus !== 'all') {
             $query->where('status', $this->filterStatus);
         }
 
-        if ($this->searchRule) {
-            $query->whereHas('rule', function($q) {
-                $q->where('parameter', 'like', '%' . $this->searchRule . '%')
-                  ->orWhere('category_target', 'like', '%' . $this->searchRule . '%');
+        // Filter Search
+        if (!empty($this->searchRule)) {
+            $search = $this->searchRule;
+            $query->whereHas('rule', function($q) use ($search) {
+                $q->where('parameter', 'like', '%' . $search . '%')
+                  ->orWhere('category_target', 'like', '%' . $search . '%');
+            });
+            // Optional: Search by Element Name juga
+            $query->orWhereHas('element', function($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%');
             });
         }
 
-        $results = $query->orderBy('created_at', 'desc')->paginate(20);
+        // Pagination
+        $results = $query->orderBy('id', 'asc')->paginate(20);
 
         return view('livewire.compliance.check-dashboard', [
-            'stats' => [
-                'total' => ValidationResult::where('project_file_id', $this->fileId)->count(),
-                'pass' => ValidationResult::where('project_file_id', $this->fileId)->where('status', 'pass')->count(),
-                'fail' => ValidationResult::where('project_file_id', $this->fileId)->where('status', 'fail')->count(),
-            ],
             'results' => $results
         ])->layout('layouts.app');
     }
