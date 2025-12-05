@@ -90,40 +90,39 @@
         <div class="text-xs">
             <h3 class="text-sm font-bold uppercase mb-2">Detailed Validation Results</h3>
             
-            @foreach($groupedResults as $category => $items)
-                <div class="mb-4 break-inside-avoid">
-                    <div class="bg-gray-200 px-2 py-1 font-bold border border-black border-b-0">{{ $category }}</div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 30px;">STS</th>
-                                <th>Element ID / Name</th>
-                                <th>Rule Check</th>
-                                <th>Actual Value</th>
-                                <th>Message</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($items as $item)
-                                <tr class="{{ $item->status == 'fail' ? 'bg-red-50' : '' }}">
-                                    <td style="text-align: center; font-weight: bold; color: {{ $item->status=='fail'?'red':'green' }}">
-                                        {{ strtoupper($item->status) }}
-                                    </td>
-                                    <td>
-                                        {{ $item->element->name ?? 'Unknown' }} <br>
-                                        <span style="font-size: 8px; color: #666;">ID: {{ $item->element->external_id }}</span>
-                                    </td>
-                                    <td>
-                                        {{ $item->rule->parameter }} {{ $item->rule->operator }} {{ $item->rule->value }}
-                                    </td>
-                                    <td style="font-family: monospace;">{{ $item->actual_value }}</td>
-                                    <td style="font-style: italic; color: #555;">{{ $item->message }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endforeach
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 30px;">STS</th>
+                        <th>Category</th>
+                        <th>Element ID / Name</th>
+                        <th>Rule Check</th>
+                        <th>Actual Value</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($results as $item)
+                        <tr class="{{ $item->status == 'fail' ? 'bg-red-50' : '' }}">
+                            <td style="text-align: center; font-weight: bold; color: {{ $item->status=='fail'?'red':'green' }}">
+                                {{ strtoupper($item->status) }}
+                            </td>
+                            <td>
+                                {{ $item->rule->category_target ?? '-' }}
+                            </td>
+                            <td>
+                                {{ $item->element->name ?? 'Unknown' }} <br>
+                                <span style="font-size: 8px; color: #666;">ID: {{ $item->element->external_id }}</span>
+                            </td>
+                            <td>
+                                {{ $item->rule->parameter }} {{ $item->rule->operator }} {{ $item->rule->value }}
+                            </td>
+                            <td style="font-family: monospace;">{{ $item->actual_value }}</td>
+                            <td style="font-style: italic; color: #555;">{{ $item->message }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
 
         <div class="mt-10 flex justify-end text-center text-sm avoid-break">
